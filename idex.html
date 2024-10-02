@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片压缩Demo</title>
+    <style>
+        /* 简单的样式调整 */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h4 {
+            color: #333;
+        }
+        label, button {
+            margin-top: 10px;
+        }
+        #outputContainer img {
+            max-width: 100px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            padding: 5px;
+            background-color: #fff;
+        }
+        #progressText {
+            display: inline-block;
+            margin-top: 10px;
+        }
+        #download {
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #download:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h4>图片压缩Demo</h4>
+    <input type="file" id="upload" accept="image/*" multiple />
+    <br>
+    <label for="quality">压缩比率：（比率越大压缩越大，图片质量越低）</label>
+    <input type="range" id="quality" min="0" max="0.9" step="0.1" value="0.5"/>
+    <br>
+    <button id="compress">压缩图片</button>
+    <br>
+    <progress id="progress" value="0" max="100" style="display: none;"></progress>
+    <br />
+    <span id="progressText"></span>
+    <br>
+    <div id="outputContainer"></div>
+    <br>
+    <button id="download" style="display: none;">下载已压缩图片</button>
+
+    <!-- 在这里加载 JavaScript 库 -->
+    <script type="module">
+        import ImageMagicAdapter from 'image-magic-adapter';
+        
+        let ImageCompressorCls = ImageMagicAdapter.ImageCompressorCls;
+        const imageCompressor = new ImageCompressorCls(); // 默认压缩质量
+
+        // 处理质量滑块的输入
+        document.getElementById('quality').addEventListener('input', () => {
+            const quality = parseFloat(document.getElementById('quality').value);
+            imageCompressor.quality = 1 - quality; // 更新压缩质量
+            console.log('更新后的压缩质量:', imageCompressor.quality);
+        });
+
+        // 处理点击“压缩图片”按钮事件
+        document.getElementById('compress').addEventListener('click', async () => {
+            const fileInput = document.getElementById('upload');
+            if (!fileInput.files.length) {
+                alert('请上传图片');
+                return;
+            }
+
+            const files = Array.from(fileInput.files);
+            const progress = document.getElementById('progress');
+            const outputContainer = document.getElementById('outputContainer');
+            const downloadButton = document.getElementById('download');
+            const progressText = document.getElementById('progressText');
+
+            outputContainer.innerHTML = '';
+            downloadButton.style.display = 'none';
+            progress.style.display = 'block';
+            progress.value = 0;
+            progressText.innerText = '';
+
+            // 使用 ImageMagicAdapter 进行图片压缩
+            await imageCompressor.compressImages(files, (completed, total) => {
+                const outputImg = document.createElement('img');
+                outputImg.src = imageCompressor.compressedImages[completed - 1];
+                outputContainer.appendChild(outputImg);
+                progress.value = (completed / total) * 100;
+                progressText.innerText = `已完成文件数: ${completed} / 总文件数: ${total}`;
+
+                // 所有图片压缩完成后显示下载按钮
+                if (completed === total) {
+                    downloadButton.style.display = 'inline-block';
+                }
+            }, false);
+
+            // 处理下载压缩后的图片
+            downloadButton.onclick = () => {
+                if (imageCompressor.compressedImages.length > 0) {
+                    imageCompressor.downloadZip(imageCompressor.compressedImages);
+                }
+            };
+        });
+    </script>
+</body>
+</html>
